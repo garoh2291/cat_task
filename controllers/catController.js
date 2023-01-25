@@ -33,8 +33,8 @@ class CatController {
       if (!cats.length) throw errorConfig.catNotFound;
       res.send(cats);
     } catch (e) {
-      res.json(e);
       console.log(e);
+      return res.status(404).json(e);
     }
   };
 
@@ -50,7 +50,7 @@ class CatController {
 
       res.send(cat);
     } catch (e) {
-      res.json(e);
+      return res.status(404).json(e);
     }
   };
 
@@ -64,8 +64,8 @@ class CatController {
       if (!cat.deletedCount) throw errorConfig.catNotFound;
       res.send("Cat was deleted");
     } catch (e) {
-      res.json(e);
       console.log(e);
+      return res.status(404).json(e);
     }
   };
 
@@ -91,7 +91,7 @@ class CatController {
       res.send(updatedCat.value);
     } catch (e) {
       console.log(e);
-      res.json(e);
+      return res.status(404).json(e);
     }
   };
 
@@ -112,7 +112,7 @@ class CatController {
       res.json("Breed was created");
     } catch (e) {
       console.log(e);
-      res.json(e);
+      return res.status(404).json(e);
     }
   };
 
@@ -135,7 +135,7 @@ class CatController {
       res.send("Data is fetched");
     } catch (e) {
       console.log(e);
-      res.json(e);
+      return res.status(404).json(e);
     }
   };
 }

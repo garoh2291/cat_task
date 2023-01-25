@@ -1,23 +1,24 @@
 const { Router } = require("express");
 const router = Router();
 const CatController = require("../controllers/catController");
+const auth = require("../middleware/authMiddleware");
 
 //get the last 10 inserted into the DB
-router.get("/", CatController.getBatch);
+router.get("/", auth, CatController.getBatch);
 
 //get breeds with query params
-router.get("/match", CatController.getMatch);
+router.get("/match", auth, CatController.getMatch);
 
 //get single breed
-router.get("/:breed", CatController.getSingle);
+router.get("/:breed", auth, CatController.getSingle);
 
 //delete single breed
-router.delete("/:breed", CatController.deleteSingle);
+router.delete("/:breed", auth, CatController.deleteSingle);
 
 //update single breed
-router.put("/:breed", CatController.updateSingle);
+router.put("/:breed", auth, CatController.updateSingle);
 
 //create new breed
-router.post("/:breed", CatController.create);
+router.post("/:breed", auth, CatController.create);
 
 module.exports = router;
