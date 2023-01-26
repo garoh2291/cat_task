@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   catNotFound: {
     name: "catNotFound",
     message: "Cat is not found",

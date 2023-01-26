@@ -1,6 +1,6 @@
-const { check } = require("express-validator");
+import { check } from "express-validator";
 
-exports.userValidator = [
+export default [
   check("email", "Write correct email").isEmail().normalizeEmail(),
   check("password", "Password must be minimum 6 characters")
     .isLength({ min: 6 })

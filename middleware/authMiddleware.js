@@ -1,8 +1,10 @@
-const jwt = require("jsonwebtoken");
-const errorConfig = require("../config/error.config");
-const { SECRET } = require("../config/index");
+import jwt from "jsonwebtoken";
+import errorConfig from "../config/error.config.js";
+import configs from "../config/index.js";
 
-module.exports = (req, res, next) => {
+const { SECRET } = configs();
+
+export default (req, res, next) => {
   try {
     let token = req.headers.authorization;
 

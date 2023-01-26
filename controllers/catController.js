@@ -1,143 +1,67 @@
-const errorConfig = require("../config/error.config");
-const { getCollection } = require("../utils/helpers");
-const { FETCH_URL } = require("../config/index");
+import auth from "../middleware/authMiddleware.js";
+import {
+  getBatch,
+  getMatch,
+  getSingle,
+  deleteSingle,
+  updateSingle,
+  create,
+} from "../utils/helpers.js";
 
-class CatController {
-  getBatch = async (req, res) => {
-    try {
-      const collection = await getCollection();
-
-      const cats = await collection
-        .find()
-        .sort({ _id: -1 })
-        .limit(10)
-        .toArray();
-      res.send(cats);
-    } catch (e) {
-      console.log(e);
-    }
-  };
-
-  getMatch = async (req, res) => {
-    try {
-      const query = req.query;
-      const collection = await getCollection();
-
-      const dbQuery = {};
-      if (query.breed) {
-        const searchReg = new RegExp(query.breed, "ig");
-        dbQuery.breed = searchReg;
-      }
-
-      const cats = await collection.find(dbQuery).toArray();
-      if (!cats.length) throw errorConfig.catNotFound;
-      res.send(cats);
-    } catch (e) {
-      console.log(e);
-      return res.status(404).json(e);
-    }
-  };
-
-  getSingle = async (req, res) => {
-    try {
-      const {
-        params: { breed },
-      } = req;
-      //need to change
-      const collection = await getCollection();
-      const cat = await collection.findOne({ breed });
-      if (!cat) throw errorConfig.catNotFound;
-
-      res.send(cat);
-    } catch (e) {
-      return res.status(404).json(e);
-    }
-  };
-
-  deleteSingle = async (req, res) => {
-    try {
-      const breed = req.params.breed;
-      const collection = await getCollection();
-
-      const cat = await collection.deleteOne({ breed });
-
-      if (!cat.deletedCount) throw errorConfig.catNotFound;
-      res.send("Cat was deleted");
-    } catch (e) {
-      console.log(e);
-      return res.status(404).json(e);
-    }
-  };
-
-  updateSingle = async (req, res) => {
-    try {
-      const {
-        params: { breed },
-        body,
-      } = req;
-
-      const collection = await getCollection();
-
-      const updatedCat = await collection.findOneAndUpdate(
-        { breed: breed },
-        { $set: body },
-        { upsert: true, returnDocument: "after" }
-      );
-
-      if (!updatedCat.lastErrorObject.updatedExisting) {
-        throw errorConfig.catNotFound;
-      }
-
-      res.send(updatedCat.value);
-    } catch (e) {
-      console.log(e);
-      return res.status(404).json(e);
-    }
-  };
-
-  create = async (req, res) => {
-    try {
-      const {
-        params: { breed },
-        body,
-      } = req;
-      const collection = await getCollection();
-      const isExist = await collection.findOne({ breed });
-      if (isExist) throw errorConfig.catIsExist;
-      const newCat = await collection.insertOne({
-        created_at: new Date(),
-        breed,
-        ...body,
-      });
-      res.json("Breed was created");
-    } catch (e) {
-      console.log(e);
-      return res.status(404).json(e);
-    }
-  };
-
-  fetchBreed = async (req, res) => {
-    try {
-      const { data } = await (await fetch(FETCH_URL)).json();
-      if (!data) throw errorConfig.catServerError;
-      const collection = await getCollection();
-
-      data.map(async (cat) => {
-        const isExist = await collection.findOne({ breed: cat.breed });
-        if (!isExist) {
-          await collection.insertOne({
-            created_at: new Date(),
-            ...cat,
-          });
-        }
-      });
-
-      res.send("Data is fetched");
-    } catch (e) {
-      console.log(e);
-      return res.status(404).json(e);
-    }
-  };
+export default function (app) {
+  app.get("/", getBatch);
+  app.get("/match", getMatch);
+  app.get("/:breed", getSingle);
+  app.delete("/:breed", deleteSingle);
+  app.put("/:breed", updateSingle);
+  app.post("/:breed", create);
 }
 
-module.exports = new CatController();
+// const errorConfig = require("../config/error.config");
+// const { getCollection } = require("../utils/helpers");
+// const { FETCH_URL } = require("../config/index");
+
+//   create = async (req, res) => {
+//     try {
+//       const {
+//         params: { breed },
+//         body,
+//       } = req;
+//       const collection = await getCollection();
+//       const isExist = await collection.findOne({ breed });
+//       if (isExist) throw errorConfig.catIsExist;
+//       const newCat = await collection.insertOne({
+//         created_at: new Date(),
+//         breed,
+//         ...body,
+//       });
+//       res.json("Breed was created");
+//     } catch (e) {
+//       console.log(e);
+//       return res.status(404).json(e);
+//     }
+//   };
+
+//   fetchBreed = async (req, res) => {
+//     try {
+//       const { data } = await (await fetch(FETCH_URL)).json();
+//       if (!data) throw errorConfig.catServerError;
+//       const collection = await getCollection();
+
+//       data.map(async (cat) => {
+//         const isExist = await collection.findOne({ breed: cat.breed });
+//         if (!isExist) {
+//           await collection.insertOne({
+//             created_at: new Date(),
+//             ...cat,
+//           });
+//         }
+//       });
+
+//       res.send("Data is fetched");
+//     } catch (e) {
+//       console.log(e);
+//       return res.status(404).json(e);
+//     }
+//   };
+// }

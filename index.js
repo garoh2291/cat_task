@@ -1,21 +1,14 @@
 // const express = require("express");
 import express from "express";
-import { MongoClient } from "mongodb";
-const app = express();
-// const { MongoClient } = require("mongodb");
+import helmet from "helmet";
 import config from "./config/index.js";
+import errorRoute from "./middleware/error.js";
+import catController from "./controllers/catController.js";
 
 const { PORT } = config();
+const app = express();
 
 //import helmet for header
-import helmet from "helmet";
-// const helmet = require("helmet");
-
-//import routes
-import routes from "./routes/index.js";
-// const routes = require("./routes/index");
-import errorRoute from "./middleware/error.js";
-// const errorRoute = require("./middleware/error");
 
 //to parse request body
 app.use(express.json());
@@ -29,8 +22,8 @@ app.use(
 );
 
 //connect routes
-// routes(app);
-// app.use(errorRoute);
+catController(app);
+app.use(errorRoute);
 
 async function start() {
   // const client = await MongoClient.connect(MONGODB_URI, {
