@@ -9,7 +9,7 @@ class CatController {
 
       const cats = await collection
         .find()
-        .sort({ created_at: -1 })
+        .sort({ _id: -1 })
         .limit(10)
         .toArray();
       res.send(cats);
@@ -43,7 +43,7 @@ class CatController {
       const {
         params: { breed },
       } = req;
-
+      //need to change
       const collection = await getCollection();
       const cat = await collection.findOne({ breed });
       if (!cat) throw errorConfig.catNotFound;
