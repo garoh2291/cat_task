@@ -2,17 +2,21 @@ import { MongoClient } from "mongodb";
 import configs from "../config/index.js";
 import errorConfig from "../config/error.config.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { validationResult } from "express-validator";
 
-const { MONGODB_URI, DB, SECRET, VALID, FETCH_URL } = configs();
+const { MONGODB_URI, DB, SECRET, VALID, FETCH_URL, HASH_LENGTH } = configs;
 
 //Run Db once when code will start
 const db = getDb();
 
+//Getbatch method route method
 export async function getBatch(req, res) {
   const cats = await findBatch("cat_breed");
   res.send(cats);
 }
 
+//Get all cat breeds that match
 export async function getMatch(req, res) {
   const query = req.query;
   const dbQuery = {};
@@ -27,6 +31,7 @@ export async function getMatch(req, res) {
   res.send(cats);
 }
 
+//Get single cat
 export async function getSingle(req, res) {
   try {
     const {
@@ -40,6 +45,7 @@ export async function getSingle(req, res) {
   }
 }
 
+//delete single cat
 export async function deleteSingle(req, res) {
   const {
     params: { breed },
@@ -52,6 +58,7 @@ export async function deleteSingle(req, res) {
   res.send("Cat was deleted");
 }
 
+//update single cat
 export async function updateSingle(req, res) {
   const {
     params: { breed },
@@ -66,6 +73,7 @@ export async function updateSingle(req, res) {
   res.send(updatedCat.value);
 }
 
+//create new cat
 export async function create(req, res) {
   const {
     params: { breed },
@@ -83,13 +91,89 @@ export async function create(req, res) {
   res.json("Breed was created");
 }
 
-////////////
+//fetach cats from api
+export async function fetchAll(req, res) {
+  try {
+    const { data } = await (await fetch(FETCH_URL)).json();
+    if (!data) throw errorConfig.catServerError;
+    data.map(async (cat) => {
+      const collection = await db;
+      const isExist = await findOne("cat_breed", { breed: cat.breed });
+      if (!isExist) {
+        await collection
+          .collection("cat_breed")
+          .insertOne({ created_at: new Date(), ...cat });
+      }
+    });
+    res.send("Data is fetched");
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+//get status
+export function getStatus(req, res) {
+  return res.status(200).send("You are connected");
+}
+
+//get error page
+export function errorPage(req, res) {
+  return res.send("You are in error page");
+}
+
+//create new user
+export async function createUser(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      message: "Registration error",
+      error: errors.errors[0].msg,
+    });
+  }
+  const { email, password } = req.body;
+  const currentDb = await db;
+
+  const candidate = await currentDb.collection("users").findOne({ email });
+  if (candidate) {
+    return res.status(404).json(errorConfig.userExists);
+  }
+  const hashPassword = bcrypt.hashSync(password, HASH_LENGTH);
+
+  await currentDb.collection("users").insertOne({
+    email,
+    password: hashPassword,
+  });
+
+  return res.json({ message: "Registrated" });
+}
+
+//sign in user
+export async function signin(req, res) {
+  const { email, password } = req.body;
+  const currentDb = await db;
+  const candidate = await currentDb.collection("users").findOne({ email });
+  if (!candidate) {
+    return res.status(404).json(errorConfig.userNotFound);
+  }
+
+  const validPassword = bcrypt.compareSync(password, candidate.password);
+
+  if (!validPassword) {
+    return res.status(404).json(errorConfig.wrongPasswordError);
+  }
+
+  const token = generateAccessToken(candidate._id);
+
+  res.json({ token });
+}
+
+///////////////////////MONGO DB
+
 async function findOne(dbCol, obj) {
   const collection = await db;
   return await collection.collection(dbCol).findOne(obj);
 }
 
-//will find batch cats and return
 async function findBatch(dbCol) {
   const collection = await db;
   return await collection
@@ -100,19 +184,16 @@ async function findBatch(dbCol) {
     .toArray();
 }
 
-//will find cats wich breeds contains query
 async function findMatch(dbCol, query) {
   const collection = await db;
   return await collection.collection(dbCol).find(query).toArray();
 }
 
-//will find and remove cat from params
 async function removeSingle(dbCol, deletedObj) {
   const collection = await db;
   return await collection.collection(dbCol).deleteOne(deletedObj);
 }
 
-//
 async function updateSingleFromDb(dbCol, updatedBreed, updatedObj) {
   const collection = await db;
   return collection
@@ -128,24 +209,11 @@ async function createSingle(dbCol, newCat) {
   const collection = await db;
 
   const isExist = await findOne(dbCol, { breed: newCat.breed });
-  // console.log(isExist);
   if (isExist) return { error: errorConfig.catIsExist };
 
   return await collection
     .collection(dbCol)
     .insertOne({ created_at: new Date(), ...newCat });
-}
-
-async function fetchBreeds(dbCol) {
-  const { data } = await (await fetch(FETCH_URL)).json();
-  if (!data) errorConfig.catServerError;
-
-  data.map(async (cat) => {
-    const isExist = await findOne(dbCol, { breed: cat.breed });
-    if (!isExist) {
-      await createSingle(dbCol, cat);
-    }
-  });
 }
 
 async function getDb() {
@@ -156,16 +224,9 @@ async function getDb() {
   return await client.db(DB);
 }
 
-// async function getUsers() {
-//   //connect to mongodb and return users collection
-//   const client = await MongoClient.connect(MONGODB_URI, {
-//     useNewUrlParser: true,
-//   });
-//   // return await client.db(DB).collection("users");
-// }
-
+/////////////////////////////////
+//TOKEN
 const generateAccessToken = (id) => {
-  //take passed id and return generated token
   const payload = {
     id,
   };
